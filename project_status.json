@@ -9,14 +9,31 @@
   "successor_inheritance_verified": true,
   "successor_local_trial_rejected_and_rollback_verified": true,
   "holdout_workloads_completed": 2,
-  "holdout_throughput_gains": [0.22810560861953233, 0.19334749894937553],
+  "holdout_throughput_gains": [
+    0.22810560861953233,
+    0.19334749894937553
+  ],
   "holdout_read_only_provenance_verified": true,
   "random_control_one_trial_complete": true,
-  "equal_budget_pilot": {"local_runs": 3, "random_runs": 3, "local_accepted": 3, "random_accepted": 1},
-  "environment_pilot": {"tasks": 2, "methods": ["local", "random", "fixed"], "fresh_final_scores_completed": 6, "agent_superiority_established": false},
+  "equal_budget_pilot": {
+    "local_runs": 3,
+    "random_runs": 3,
+    "local_accepted": 3,
+    "random_accepted": 1
+  },
+  "environment_pilot": {
+    "tasks": 2,
+    "methods": [
+      "local",
+      "random",
+      "fixed"
+    ],
+    "fresh_final_scores_completed": 6,
+    "agent_superiority_established": false
+  },
   "final_score_command_verified": true,
   "planner_v2_duplicate_execution_prevented": true,
-  "unit_tests_passed": 75,
+  "unit_tests_passed": 91,
   "proposal_replay": {
     "status": "completed",
     "protocol": "development-same-state-replay-v1",
@@ -59,7 +76,10 @@
     "invalid_calls": 8,
     "candidate_experiments_consumed": 0,
     "fresh_final_scores_valid": 2,
-    "final_gains": [0.0, 0.0],
+    "final_gains": [
+      0.0,
+      0.0
+    ],
     "valid_model_proposal_observed": false,
     "superiority_established": false,
     "batch": "runs/v3-smoke-20260930-032915-5aa845",
@@ -87,7 +107,11 @@
     "planned_jobs": 7,
     "completed_jobs": 7,
     "pending_jobs": [],
-    "completed_random_seeds": [100, 101, 102],
+    "completed_random_seeds": [
+      100,
+      101,
+      102
+    ],
     "slot_ceiling_per_job": 1,
     "llm_calls": 3,
     "retry_calls": 0,
@@ -100,11 +124,19 @@
     "rollback_verified_count": 4,
     "fresh_final_valid_count": 7,
     "elapsed_seconds": 1105.2350000000006,
-    "sessions_elapsed_seconds": [935.6100000000006, 169.625],
-    "final_gains": {"full": 0.0, "no_feedback": 0.0,
-                    "no_context": 0.06423520677519345,
-                    "random_101": 0.1599119618239322, "random_102": 0.0,
-                    "fixed": 0.2827540931290593, "random_100": 0.0},
+    "sessions_elapsed_seconds": [
+      935.6100000000006,
+      169.625
+    ],
+    "final_gains": {
+      "full": 0.0,
+      "no_feedback": 0.0,
+      "no_context": 0.06423520677519345,
+      "random_101": 0.1599119618239322,
+      "random_102": 0.0,
+      "fixed": 0.2827540931290593,
+      "random_100": 0.0
+    },
     "superiority_established": false,
     "result_file": "docs/CONTEXT_RESULTS_2026-09-30.md",
     "next_step": "Run frozen full/no_history two-slot development diagnostic before full multi-task blocks"
@@ -114,9 +146,21 @@
     "batch": "runs/context-pilot-20260930-074637-e61387",
     "status": "completed",
     "tasks": 1,
-    "methods": ["full", "no_history"],
+    "methods": [
+      "full",
+      "no_history"
+    ],
     "slot_ceiling_per_job": 2,
-    "candidate_sequences": {"full": ["C02", "C03"], "no_history": ["C01", "C08"]},
+    "candidate_sequences": {
+      "full": [
+        "C02",
+        "C03"
+      ],
+      "no_history": [
+        "C01",
+        "C08"
+      ]
+    },
     "initial_choices_matched": false,
     "llm_calls": 4,
     "total_tokens": 3776,
@@ -129,7 +173,10 @@
     "rollback_verified_count": 3,
     "fresh_final_valid_count": 2,
     "elapsed_seconds": 560.5,
-    "final_gains": {"full": 0.0, "no_history": 0.06978988611585613},
+    "final_gains": {
+      "full": 0.0,
+      "no_history": 0.06978988611585613
+    },
     "useful_history_effect_established": false,
     "same_state_causal_effect_established": false,
     "evidence_attribution_error_observed": true,
@@ -148,5 +195,20 @@
   "holdout_result_file": "docs/HOLDOUT_2026-09-24.md",
   "comparison_result_file": "docs/COMPARISON_2026-09-24.md",
   "environment_pilot_result_file": "docs/PILOT_RESULTS_2026-09-24.md",
-  "planner_v2_diagnostic_file": "docs/PLANNER_V2_2026-09-24.md"
+  "planner_v2_diagnostic_file": "docs/PLANNER_V2_2026-09-24.md",
+  "planner_capacity": {
+    "status": "implemented_not_yet_executed",
+    "protocol": "development-planner-capacity-v1",
+    "protocol_file": "docs/CAPACITY_PROTOCOL_2026-09-30.md",
+    "target_model_unchanged": true,
+    "independent_planner_services": true,
+    "planning_models": [
+      "Qwen2.5-1.5B Q4_K_M",
+      "Qwen2.5-3B Q4_K_M"
+    ],
+    "proposal_slot_ceiling": 32,
+    "llm_call_ceiling": 64,
+    "model_asset_verified": true,
+    "performance_gain_established": false
+  }
 }

@@ -1,0 +1,9 @@
+{
+  "protocol": "development-planner-capacity-v1",
+  "source_batch": "runs/proposal-replay-20260930-170331-042a37",
+  "source_selection": "configs/replay-selection-20260930.json",
+  "planner_profiles": ["configs/planner-local-1.5b.json", "configs/planner-local-3b.json"],
+  "order_seed": 20260930,
+  "max_seconds": 900,
+  "note": "Four existing development states, four input variants, two independent planning models; 32 slots and 64 generation calls maximum. No candidate execution, no new performance score."
+}

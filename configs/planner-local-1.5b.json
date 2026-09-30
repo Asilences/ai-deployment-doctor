@@ -1,0 +1,18 @@
+{
+  "backend": "llama_cpp",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+  "model_revision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
+  "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+  "model_path": "models/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+  "llama_cpp_version": "b11138",
+  "llama_cpp_binary": "vendor/llama.cpp-b11138/llama-server.exe",
+  "max_model_len": 2048,
+  "batch_size": 512,
+  "gpu_layers": 99,
+  "cpu_threads": 8,
+  "startup_timeout_s": 180,
+  "version": "local-planning-service-v1",
+  "service_id": "qwen25-15b",
+  "port": 8771,
+  "model_size_bytes": 1117320736
+}
