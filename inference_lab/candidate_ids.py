@@ -5,6 +5,7 @@ import urllib.request
 
 from .core import fingerprint, validate_candidate
 from .proposal_trace import tracked_call
+from .context_ablation import filter_context
 
 
 class SearchSpaceExhausted(ValueError):
@@ -69,6 +70,7 @@ def choose_by_id(planner, state, history):
                                'gain': t.get('verdict', {}).get('gain'),
                                'reason': t.get('verdict', {}).get('reason')}
                               for t in history[-12:]]}
+    brief = filter_context(brief, getattr(planner, 'context_mode', 'full'))
     schema = {'type': 'object', 'properties': {
         'candidate_id': {'type': 'string', 'enum': [r['candidate_id'] for r in available]},
         'hypothesis': {'type': 'string'}, 'expected_effect': {'type': 'string'}},
@@ -100,7 +102,9 @@ def choose_by_id(planner, state, history):
                 return json.load(stream)
 
         response = tracked_call(planner, send, {'payload_sha256': fingerprint(payload),
-                                                'available_candidates': available})
+                                                'available_candidates': available,
+                                                'context_mode': getattr(planner, 'context_mode', 'full'),
+                                                'evidence': brief})
         trace = planner.last_trace[-1]
         try:
             proposal = parse_id(response, catalogue, available, max_text_length)

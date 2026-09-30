@@ -56,8 +56,13 @@ def summarize_runs(inputs):
         gain = final.get('throughput_gain') if valid_final else None
         rows.append({'source_run': str(path.parent), 'status': run.get('status'),
                      'task_id': fingerprint({'settings': run.get('settings'), 'backend': run.get('backend'),
-                                              'hardware': run.get('hardware')}),
+                                              'hardware': run.get('hardware'),
+                                              'evaluator_sources': run.get('evaluator_sources')}),
                      'method': run.get('planner'), 'planner_version': run.get('planner_version'),
+                     'context_mode': run.get('context_mode'),
+                     'method_label': ('local:' + (run.get('context_mode') or 'unknown'))
+                                     if run.get('planner') == 'local' else run.get('planner'),
+                     'proposal_slot_limit': run.get('proposal_slot_limit'),
                      'seed': run.get('seed'), 'environment_fingerprint': run.get('environment_fingerprint'),
                      'final_verified_improvement': gain,
                      'final_valid': final.get('valid'), 'final_record_count': len(matches),
@@ -84,6 +89,29 @@ def summarize_runs(inputs):
                      'note': 'Legacy costs unknown' if not new else
                              ('Multiple final records; no score selected' if len(matches) > 1 else '')})
     return rows
+
+
+def paired_differences(rows):
+    """Descriptive task pairs only; repetitions/seeds never become extra tasks."""
+    result = []
+    for task_id in sorted({r['task_id'] for r in rows}):
+        group = [r for r in rows if r['task_id'] == task_id]
+        reference = [r for r in group if r.get('method_label') == 'local:full']
+        if len(reference) != 1:
+            continue
+        reference = reference[0]
+        for other in group:
+            if other is reference:
+                continue
+            left, right = reference['final_verified_improvement'], other['final_verified_improvement']
+            same_budget = reference.get('proposal_slot_limit') == other.get('proposal_slot_limit')
+            result.append({'task_id': task_id, 'reference_run': reference['source_run'],
+                           'comparator_run': other['source_run'], 'comparator': other.get('method_label'),
+                           'comparator_seed': other.get('seed'), 'same_slot_ceiling': same_budget,
+                           'paired_gain_difference': left - right if left is not None and right is not None
+                           and same_budget else None,
+                           'note': 'Descriptive within-task pair; not an independent statistical sample'})
+    return result
 
 
 def serialize(rows, format='json'):

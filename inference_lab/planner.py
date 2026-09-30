@@ -8,6 +8,7 @@ from pathlib import Path
 from .core import validate_candidate
 from .candidate_ids import candidate_catalog, choose_by_id
 from .proposal_trace import trace_totals, tracked_call
+from .context_ablation import MODES
 
 SYSTEM = '''You are an inference configuration researcher. Human-defined objectives,
 workload, model and acceptance rules are fixed. Inspect measured evidence, diagnose
@@ -37,11 +38,14 @@ def parse_proposal(response, settings):
 
 
 class Planner:
-    def __init__(self, kind, s, root, seed=731, version='v2'):
+    def __init__(self, kind, s, root, seed=731, version='v2', context_mode='full'):
         self.kind, self.s, self.root = kind, s, root
         if version not in ('v2', 'v3', 'v3.1') or (version in ('v3', 'v3.1') and kind != 'local'):
             raise ValueError('Planner v3/v3.1 is supported only by the local planner')
         self.version = version if kind in ('local', 'openrouter') else kind + '-v1'
+        if context_mode not in MODES or (context_mode != 'full' and (kind != 'local' or version != 'v3.1')):
+            raise ValueError('Context ablations require the local v3.1 planner')
+        self.context_mode = context_mode
         self.last_trace = []
         self.last_available = []
         self.catalog = candidate_catalog(s)

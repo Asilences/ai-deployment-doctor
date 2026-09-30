@@ -6,6 +6,8 @@
 
 新增 [规划器 v3 与成本账本](docs/PLANNER_V3_2026-09-30.md)，通过 `--planner-version v3` 启用；省略时仍使用 v2。实现与实测进度见 [科研工作日志](docs/WORKLOG_2026-09-30.md)。`summary` 命令可只读导出 JSON/CSV。
 
+[v3.1](docs/PLANNER_V31_2026-09-30.md) 增加解释字段长度约束和结束原因账本；[信息消融开发协议](docs/CONTEXT_PILOT_2026-09-30.md) 提供完整信息、环境 / 负载 / 反馈消融与多种子随机、固定规则的独立比较。用 `python -B scripts/run_context_pilot.py --dry-run` 查看冻结计划；这些接口与开发结果不等于环境感知有效性证明。
+
 公开仓库保存代码、配置、测试与研究文档。历史文档中的 `../runs/...` 链接指向本地原始证据，GitHub 不包含这些运行目录；模型、vendor 与 API 密钥也不上传。
 
 ## 已搭建

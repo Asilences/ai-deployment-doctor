@@ -79,8 +79,9 @@ def execute(s, backend, planner, directory, iterations, initial=None, max_second
     run.update(record_version='proposal-ledger-v1', protocol_version='paired-ab-v1',
                verifier_version='bounded-gate-v1', planner_version=getattr(planner, 'version', 'unknown'),
                planner_sources={k: v for k, v in run['code_sources'].items()
-                                if k in ('planner.py', 'candidate_ids.py', 'proposal_trace.py')},
+                                if k in ('planner.py', 'candidate_ids.py', 'proposal_trace.py', 'context_ablation.py')},
                seed=getattr(planner, 'seed', None), proposal_slot_limit=iterations,
+               context_mode=getattr(planner, 'context_mode', None),
                max_seconds=max_seconds, candidate_catalog=getattr(planner, 'catalog', None))
     run['environment_fingerprint'] = fingerprint({'settings': s, 'platform': run['platform'],
                                                   'hardware': run['hardware'], 'backend': backend.name})

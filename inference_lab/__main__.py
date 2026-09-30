@@ -18,6 +18,7 @@ from .core import validate_settings
 from .planner import Planner
 from .runner import execute
 from .summary import export_summary
+from .context_ablation import MODES
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -66,6 +67,7 @@ def main():
     parser.add_argument('--config', type=Path, default=None)
     parser.add_argument('--planner', choices=['random', 'local', 'openrouter', 'fixed'], default=None)
     parser.add_argument('--planner-version', choices=['v2', 'v3', 'v3.1'], default='v2')
+    parser.add_argument('--context-mode', choices=MODES, default='full')
     parser.add_argument('--max-seconds', type=float, default=None,
                         help='Stop starting new proposal slots after this elapsed time; finish recovery safely')
     parser.add_argument('--input', type=Path, nargs='+', help='Summary directories or run.json files')
@@ -114,7 +116,8 @@ def main():
         mock = args.command == 'demo'
         kind = 'scripted' if mock else ('random' if args.command == 'baseline' else
                (args.planner or ('local' if s.get('backend') == 'llama_cpp' else 'openrouter')))
-        planner = Planner(kind, s, ROOT, seed=args.seed, version=args.planner_version)
+        planner = Planner(kind, s, ROOT, seed=args.seed, version=args.planner_version,
+                          context_mode=args.context_mode)
         backend = MockBackend(s, ROOT) if mock else (LlamaCppBackend(s, ROOT)
                   if s.get('backend') == 'llama_cpp' else VllmBackend(s, ROOT))
         initial = json.loads(args.inherit.read_text(encoding='utf-8')) if args.inherit else None
