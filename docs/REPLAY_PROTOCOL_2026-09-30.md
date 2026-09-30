@@ -66,3 +66,5 @@ python -B scripts/run_proposal_replay.py --summary runs/<新批次>
 ```
 
 prepare 在任何真实调用前写入冻结状态、输入哈希、顺序、预算和源码身份；execute 要求相同干净提交，拒绝更换状态或实施中改源码。完成槽位不重做，summary 只读。原始运行、snapshot、响应与人工标注仅本地保存；GitHub 公开源码、协议与描述性结果，不包含 `runs/`。
+
+执行后补充：新增只读 `scripts/audit_proposal_replay.py <批次>`，不改上述实验设计、重放实现或原始数据。四状态的完整结果、人工复核与成本见 [实测结果](REPLAY_RESULTS_2026-09-30.md)。

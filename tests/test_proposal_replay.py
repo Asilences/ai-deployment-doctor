@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('proposal_replay_script_test', ROOT / 'scripts/run_proposal_replay.py')
 SCRIPT = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SCRIPT)
+AUDIT_SPEC = importlib.util.spec_from_file_location('proposal_replay_audit_test', ROOT / 'scripts/audit_proposal_replay.py')
+AUDIT = importlib.util.module_from_spec(AUDIT_SPEC)
+AUDIT_SPEC.loader.exec_module(AUDIT)
 
 
 class ProposalReplayTests(unittest.TestCase):
@@ -272,3 +275,32 @@ class ProposalReplayTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'Original evidence changed'):
                     SCRIPT.execute(batch)
                 backend.assert_not_called()
+
+    def test_readonly_audit_detects_payload_and_unknown_cost_tampering(self):
+        result, _ = self.replay([self.response(usage=None)])
+        snapshot = self.snapshot()
+        job = {'job_id': 'J00', 'representation': 'original', 'history_mode': 'full',
+               'input_sha256': fingerprint(input_variant(snapshot, 'original', 'full'))}
+        before = copy.deepcopy(result)
+        AUDIT.audit_result(job, result, snapshot, ROOT)
+        self.assertEqual(before, result)
+        altered = copy.deepcopy(result)
+        altered['proposal_calls'][0]['request']['payload']['temperature'] = 1
+        with self.assertRaisesRegex(ValueError, 'Payload'):
+            AUDIT.audit_result(job, altered, snapshot, ROOT)
+        result['costs']['total_tokens'] = 0
+        with self.assertRaisesRegex(ValueError, 'Cost mismatch'):
+            AUDIT.audit_result(job, result, snapshot, ROOT)
+
+    def test_readonly_audit_rejects_claimed_execution_and_replaced_proposal(self):
+        result, _ = self.replay([self.response()])
+        snapshot = self.snapshot()
+        job = {'job_id': 'J00', 'representation': 'original', 'history_mode': 'full',
+               'input_sha256': fingerprint(input_variant(snapshot, 'original', 'full'))}
+        result['candidate_executed'] = True
+        with self.assertRaisesRegex(ValueError, 'executed'):
+            AUDIT.audit_result(job, result, snapshot, ROOT)
+        result['candidate_executed'] = False
+        result['proposal']['candidate_id'] = 'C06'
+        with self.assertRaisesRegex(ValueError, 'Proposal/status'):
+            AUDIT.audit_result(job, result, snapshot, ROOT)
