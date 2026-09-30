@@ -17,6 +17,7 @@ from .llama_backend import LlamaCppBackend
 from .core import validate_settings
 from .planner import Planner
 from .runner import execute
+from .summary import export_summary
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -61,9 +62,15 @@ def doctor():
 
 def main():
     parser = argparse.ArgumentParser(description='Bounded L2 inference optimization lab')
-    parser.add_argument('command', choices=['doctor', 'demo', 'baseline', 'run', 'audit', 'final'])
+    parser.add_argument('command', choices=['doctor', 'demo', 'baseline', 'run', 'audit', 'final', 'summary'])
     parser.add_argument('--config', type=Path, default=None)
     parser.add_argument('--planner', choices=['random', 'local', 'openrouter', 'fixed'], default=None)
+    parser.add_argument('--planner-version', choices=['v2', 'v3'], default='v2')
+    parser.add_argument('--max-seconds', type=float, default=None,
+                        help='Stop starting new proposal slots after this elapsed time; finish recovery safely')
+    parser.add_argument('--input', type=Path, nargs='+', help='Summary directories or run.json files')
+    parser.add_argument('--format', choices=['json', 'csv'], default='json')
+    parser.add_argument('--output', type=Path, help='Create a new summary file; never overwrite')
     parser.add_argument('--seed', type=int, default=731, help='Random-search seed, saved with each random proposal')
     parser.add_argument('--iterations', type=int, default=3)
     parser.add_argument('--inherit', type=Path, help='A previous best.json with identical experiment identity')
@@ -73,6 +80,10 @@ def main():
         doctor()
         return 0
     try:
+        if args.command == 'summary':
+            text = export_summary(args.input or [ROOT / 'runs'], args.format, args.output)
+            print('Summary: ' + str(args.output) if args.output else text)
+            return 0
         if not 0 <= args.iterations <= 20:
             raise ValueError('Iterations must be between 0 and 20')
         config_path = args.config or ROOT / 'configs' / ('windows-1.5b.json' if sys.platform == 'win32' else 'local.json')
@@ -103,13 +114,14 @@ def main():
         mock = args.command == 'demo'
         kind = 'scripted' if mock else ('random' if args.command == 'baseline' else
                (args.planner or ('local' if s.get('backend') == 'llama_cpp' else 'openrouter')))
-        planner = Planner(kind, s, ROOT, seed=args.seed)
+        planner = Planner(kind, s, ROOT, seed=args.seed, version=args.planner_version)
         backend = MockBackend(s, ROOT) if mock else (LlamaCppBackend(s, ROOT)
                   if s.get('backend') == 'llama_cpp' else VllmBackend(s, ROOT))
         initial = json.loads(args.inherit.read_text(encoding='utf-8')) if args.inherit else None
         stamp = datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:6]
         directory = ROOT / 'runs' / (backend.name + '-' + kind + '-' + stamp)
-        execute(s, backend, planner, directory, 0 if args.command == 'baseline' else args.iterations, initial)
+        execute(s, backend, planner, directory, 0 if args.command == 'baseline' else args.iterations,
+                initial, max_seconds=args.max_seconds)
         print('Report: ' + str(directory / 'report.html'))
         print('Retained state: ' + str(directory / 'best.json'))
         if mock:

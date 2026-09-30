@@ -6,6 +6,8 @@ import urllib.request
 from pathlib import Path
 
 from .core import validate_candidate
+from .candidate_ids import candidate_catalog, choose_by_id
+from .proposal_trace import trace_totals, tracked_call
 
 SYSTEM = '''You are an inference configuration researcher. Human-defined objectives,
 workload, model and acceptance rules are fixed. Inspect measured evidence, diagnose
@@ -35,8 +37,14 @@ def parse_proposal(response, settings):
 
 
 class Planner:
-    def __init__(self, kind, s, root, seed=731):
+    def __init__(self, kind, s, root, seed=731, version='v2'):
         self.kind, self.s, self.root = kind, s, root
+        if version not in ('v2', 'v3') or (version == 'v3' and kind != 'local'):
+            raise ValueError('Planner v3 is supported only by the local planner')
+        self.version = version if kind in ('local', 'openrouter') else kind + '-v1'
+        self.last_trace = []
+        self.last_available = []
+        self.catalog = candidate_catalog(s)
         if type(seed) is not int or seed < 0:
             raise ValueError('Random-search seed must be a nonnegative integer')
         self.seed = seed
@@ -56,6 +64,40 @@ class Planner:
                 raise ValueError('Configure OPENROUTER_API_KEY and OPENROUTER_MODEL in the local .env first')
 
     def propose(self, state, history):
+        self.last_trace = []
+        self.last_available = []
+        if getattr(self, 'version', 'v2') == 'v3':
+            proposal = choose_by_id(self, state, history)
+        else:
+            proposal = self._propose(state, history)
+        if self.last_trace:
+            totals = trace_totals(self.last_trace)
+            proposal['usage'] = {k: totals[k] for k in
+                                 ('prompt_tokens', 'completion_tokens', 'total_tokens', 'cost')}
+        return proposal
+
+    def _local_response(self, request):
+        def send():
+            with self.local_http.open(request, timeout=90) as stream:
+                return json.load(stream)
+        return tracked_call(self, send)
+
+    def _parse_local(self, response, visited):
+        trace = self.last_trace[-1]
+        try:
+            proposal = parse_proposal(response, self.s)
+            if proposal['config'] in visited:
+                trace['parse_result'] = 'rejected'
+                trace['failure_category'] = 'duplicate_candidate'
+            else:
+                trace['parse_result'] = 'valid'
+            return proposal
+        except ValueError:
+            trace['parse_result'] = 'rejected'
+            trace['failure_category'] = 'invalid_output'
+            raise
+
+    def _propose(self, state, history):
         if self.kind == 'fixed':
             if self.s.get('backend') != 'llama_cpp':
                 raise ValueError('The fixed heuristic is defined only for the llama.cpp experiment')
@@ -108,10 +150,9 @@ class Planner:
             request = urllib.request.Request('http://127.0.0.1:' + str(self.s['port']) + '/v1/chat/completions',
                                              data=json.dumps(payload).encode(),
                                              headers={'Content-Type': 'application/json'})
-            with self.local_http.open(request, timeout=90) as stream:
-                response = json.load(stream)
+            response = self._local_response(request)
             try:
-                first = parse_proposal(response, self.s)
+                first = self._parse_local(response, visited)
             except ValueError:
                 first = None
             if first is None or first['config'] in visited:
@@ -128,16 +169,21 @@ class Planner:
                 retry = urllib.request.Request(
                     'http://127.0.0.1:' + str(self.s['port']) + '/v1/chat/completions',
                     data=json.dumps(payload).encode(), headers={'Content-Type': 'application/json'})
-                with self.local_http.open(retry, timeout=90) as stream:
-                    response = json.load(stream)
+                response = self._local_response(retry)
         else:
-            response = self.api.request(self.credentials, '/chat/completions', {
+            response = tracked_call(self, lambda: self.api.request(self.credentials, '/chat/completions', {
                 'model': self.credentials['OPENROUTER_MODEL'], 'max_tokens': 1200,
                 'messages': [{'role': 'system', 'content': SYSTEM},
-                             {'role': 'user', 'content': json.dumps(evidence)}]})
-        p = parse_proposal(response, self.s)
+                             {'role': 'user', 'content': json.dumps(evidence)}]}))
+        try:
+            p = self._parse_local(response, visited) if self.kind == 'local' else parse_proposal(response, self.s)
+        except ValueError:
+            self.last_trace[-1].update(parse_result='rejected', failure_category='invalid_output')
+            raise
         if p['config'] in visited:
+            self.last_trace[-1].update(parse_result='rejected', failure_category='duplicate_candidate')
             raise ValueError('Model repeated a previously tested configuration; no candidate was executed')
+        self.last_trace[-1]['parse_result'] = 'valid'
         # Deliberately do not persist raw responses, headers or credential objects.
         if self.kind == 'openrouter':
             for k in ('hypothesis', 'expected_effect'):

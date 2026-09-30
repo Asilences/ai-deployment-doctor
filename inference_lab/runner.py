@@ -1,10 +1,40 @@
 import html
 import json
 import platform
+import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from .core import check_samples, dump, fingerprint, summarize, validate_candidate, verdict
+from .candidate_ids import SearchSpaceExhausted
+from .proposal_trace import trace_totals
+
+
+def provenance(source_dir, backend_name):
+    code = {p.name: fingerprint(p.read_text(encoding='utf-8')) for p in sorted(source_dir.glob('*.py'))}
+    commit = None
+    dirty = None
+    try:
+        result = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=source_dir.parent,
+                                capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            commit = result.stdout.strip()
+            result = subprocess.run(['git', 'status', '--porcelain'], cwd=source_dir.parent,
+                                    capture_output=True, text=True, timeout=5)
+            dirty = bool(result.stdout.strip()) if result.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    hardware = {}
+    if backend_name != 'mock':
+        try:
+            result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,driver_version',
+                                     '--format=csv,noheader'], capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                hardware['nvidia_smi'] = result.stdout.strip()
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    return {'git_commit': commit, 'git_dirty': dirty, 'code_sources': code, 'hardware': hardware}
 
 
 def render_report(directory, run):
@@ -26,7 +56,10 @@ pre{white-space:pre-wrap;background:white;padding:20px}h1{font-size:27px}</style
     (directory / 'report.html').write_text(page, encoding='utf-8')
 
 
-def execute(s, backend, planner, directory, iterations, initial=None):
+def execute(s, backend, planner, directory, iterations, initial=None, max_seconds=None):
+    started = time.monotonic()
+    if max_seconds is not None and max_seconds <= 0:
+        raise ValueError('Time budget must be positive')
     directory = Path(directory).resolve()
     directory.mkdir(parents=True, exist_ok=False)
     source_dir = Path(__file__).parent
@@ -42,10 +75,36 @@ def execute(s, backend, planner, directory, iterations, initial=None):
     run = {'backend': backend.name, 'planner': planner.kind, 'status': 'running',
            'started_utc': datetime.now(timezone.utc).isoformat(), 'settings': s,
            'platform': platform.platform(), 'evaluator_sources': source_hashes, 'trials': [], 'state': None}
+    run.update(provenance(source_dir, backend.name))
+    run.update(record_version='proposal-ledger-v1', protocol_version='paired-ab-v1',
+               verifier_version='bounded-gate-v1', planner_version=getattr(planner, 'version', 'unknown'),
+               planner_sources={k: v for k, v in run['code_sources'].items()
+                                if k in ('planner.py', 'candidate_ids.py', 'proposal_trace.py')},
+               seed=getattr(planner, 'seed', None), proposal_slot_limit=iterations,
+               max_seconds=max_seconds, candidate_catalog=getattr(planner, 'catalog', None))
+    run['environment_fingerprint'] = fingerprint({'settings': s, 'platform': run['platform'],
+                                                  'hardware': run['hardware'], 'backend': backend.name})
+    planner.environment = run['hardware']
+    run['planner_service_config'] = (validate_candidate({'parallel': 1, 'ubatch_size': 128}, s)
+                                     if getattr(planner, 'version', None) == 'v3' else None)
 
     def save():
+        calls = [c for trial in run['trials'] for c in trial.get('proposal_calls', [])]
+        run['costs'] = {**trace_totals(calls),
+                        'proposal_slots': len(run['trials']),
+                        'experiments_consumed': sum(t.get('candidate_executed', False) for t in run['trials']),
+                        'rollback_count': sum(t.get('rollback', '').startswith('incumbent_restart') for t in run['trials']),
+                        'planner_setup_seconds': sum(t.get('planner_setup_seconds', 0) for t in run['trials']),
+                        'wall_clock_seconds': time.monotonic() - started}
         dump(directory / 'run.json', run)
         render_report(directory, run)
+
+    def remember(trial):
+        history.append(trial.copy())
+        state['history'] = list(history)
+        run['state'] = state
+        dump(directory / 'best.json', state)
+        save()
 
     def evaluate(candidate, label):
         target = directory / label
@@ -78,22 +137,43 @@ def execute(s, backend, planner, directory, iterations, initial=None):
         save()
         history = list(initial.get('history', [])) if initial else []
         for i in range(iterations):
-            trial = {'id': i + 1}
+            if max_seconds is not None and time.monotonic() - started >= max_seconds:
+                run['stop_reason'] = 'time_budget_reached'
+                break
+            trial = {'id': i + 1, 'candidate_executed': False, 'proposal_calls': []}
             run['trials'].append(trial)
             save()
             print(f'Experiment {i + 1}/{iterations}: proposing candidate...', flush=True)
+            planner.last_trace = []
             try:
+                if run['planner_service_config'] is not None:
+                    setup_started = time.monotonic()
+                    try:
+                        backend.start(run['planner_service_config'], directory / f'proposal-{i + 1}/service')
+                    finally:
+                        trial['planner_setup_seconds'] = time.monotonic() - setup_started
                 p = planner.propose(state, history)
                 trial['proposal'] = p
                 candidate = validate_candidate(p['config'], s)
             except (ValueError, RuntimeError, OSError, KeyError) as error:
-                trial['verdict'] = {'accepted': False, 'reason': 'proposal_failed', 'error_type': type(error).__name__}
-                save()
+                exhausted = isinstance(error, SearchSpaceExhausted)
+                trial['verdict'] = {'accepted': False, 'reason': 'search_space_exhausted' if exhausted else 'proposal_failed',
+                                    'error_type': type(error).__name__}
+                trial['proposal_calls'] = list(getattr(planner, 'last_trace', []))
+                trial['available_candidates'] = list(getattr(planner, 'last_available', []))
+                remember(trial)
+                if exhausted:
+                    run['stop_reason'] = 'search_space_exhausted'
+                    break
                 continue
+            trial['proposal_calls'] = list(getattr(planner, 'last_trace', []))
+            trial['available_candidates'] = list(getattr(planner, 'last_available', []))
             if candidate == state['config']:
                 trial['verdict'] = {'accepted': False, 'reason': 'unchanged_candidate'}
-                save()
+                remember(trial)
                 continue
+            trial['candidate_executed'] = True
+            save()
             reference, measurements, functional = [], [], True
             try:
                 # Alternating A/B order reduces drift; each evaluation uses a fresh server.
@@ -134,23 +214,22 @@ def execute(s, backend, planner, directory, iterations, initial=None):
                 if outputs != golden or check_samples([sample], {**s, 'repeats': 1}):
                     raise RuntimeError('Could not recover incumbent after failed promotion')
                 trial['rollback'] = 'incumbent_restart_verified_after_failed_promotion'
-            history.append(trial.copy())
-            state = {**state, 'history': history[-12:]}
             if decision['accepted']:
                 state.update(config=candidate, generation=state['generation'] + 1,
                              metrics=summarize(measurements))
-            run['state'] = state
-            dump(directory / 'best.json', state)
-            save()
+            remember(trial)
             print(f"  {decision['reason']}; {trial['rollback']}", flush=True)
         run['status'] = 'completed'
         return run
     except BaseException as error:
         run['status'] = 'interrupted' if isinstance(error, KeyboardInterrupt) else 'failed'
         run['error_type'] = type(error).__name__
+        if run['trials'] and 'verdict' not in run['trials'][-1]:
+            run['trials'][-1]['proposal_calls'] = list(getattr(planner, 'last_trace', []))
         raise
     finally:
         try:
             backend.stop()
         finally:
+            run['ended_utc'] = datetime.now(timezone.utc).isoformat()
             save()

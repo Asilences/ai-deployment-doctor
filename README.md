@@ -4,6 +4,10 @@
 
 完整研究方向、架构图、文献与优先阅读、当前证据及下一步路线见 [项目总览（2026-09-30）](docs/PROJECT_OVERVIEW_2026-09-30.md)。
 
+新增 [规划器 v3 与成本账本](docs/PLANNER_V3_2026-09-30.md)，通过 `--planner-version v3` 启用；省略时仍使用 v2。实现与实测进度见 [科研工作日志](docs/WORKLOG_2026-09-30.md)。`summary` 命令可只读导出 JSON/CSV。
+
+公开仓库保存代码、配置、测试与研究文档。历史文档中的 `../runs/...` 链接指向本地原始证据，GitHub 不包含这些运行目录；模型、vendor 与 API 密钥也不上传。
+
 ## 已搭建
 
 - Windows 原生 [llama.cpp](https://github.com/ggml-org/llama.cpp/releases/tag/b11138) Vulkan GPU 后端；[vLLM](https://github.com/vllm-project/vllm/tree/v0.30.0) Linux/WSL2 后端保留作后续扩展。
