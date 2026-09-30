@@ -1,0 +1,2 @@
+# Install in a dedicated Linux/WSL2 Python 3.12 virtual environment.
+vllm==0.30.0

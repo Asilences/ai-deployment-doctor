@@ -1,0 +1,23 @@
+{
+  "backend": "llama_cpp",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+  "model_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+  "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+  "model_path": "models/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+  "llama_cpp_version": "b11138",
+  "llama_cpp_binary": "vendor/llama.cpp-b11138/llama-server.exe",
+  "port": 8765,
+  "max_model_len": 2048,
+  "batch_size": 512,
+  "gpu_layers": 99,
+  "cpu_threads": 8,
+  "baseline": {"parallel": 2, "ubatch_size": 128},
+  "search_space": {"parallel": [1, 2, 4, 8], "ubatch_size": [64, 128, 256, 512]},
+  "workload": {"requests": 16, "input_tokens": 128, "output_tokens": 32, "concurrency": 8, "seed": 42},
+  "repeats": 3,
+  "min_gain": 0.05,
+  "max_p95_ttft_ms": 10000,
+  "max_p95_e2el_ms": 60000,
+  "startup_timeout_s": 180,
+  "benchmark_timeout_s": 300
+}

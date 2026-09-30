@@ -1,0 +1,19 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "model_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "model_path": "models/qwen2.5-0.5b-instruct",
+  "vllm_version": "0.30.0",
+  "port": 8765,
+  "max_model_len": 2048,
+  "gpu_memory_utilization": 0.6,
+  "dtype": "half",
+  "baseline": {"max_num_seqs": 4, "max_num_batched_tokens": 512},
+  "search_space": {"max_num_seqs": [1, 2, 4, 8, 16, 32], "max_num_batched_tokens": [256, 512, 1024, 2048]},
+  "workload": {"requests": 32, "input_tokens": 128, "output_tokens": 64, "concurrency": 8, "seed": 42},
+  "repeats": 3,
+  "min_gain": 0.05,
+  "max_p95_ttft_ms": 3000,
+  "max_p95_e2el_ms": 15000,
+  "startup_timeout_s": 600,
+  "benchmark_timeout_s": 300
+}
