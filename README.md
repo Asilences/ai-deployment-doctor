@@ -62,3 +62,5 @@ python -m inference_lab run --config configs/pilot-serial-windows-1.5b.json --pl
 当前默认负载仅 16 个请求，适合工程演示；正式比较需要扩大请求量、独立重复、相同实验预算和未参与选择的工作负载。三个固定 prompt 的一致性检查只是功能冒烟测试，不是完整语义质量评测。5% 与测量区间不重叠是保守工程门槛，不等同统计显著性。
 
 `.env`、模型文件、下载程序和 `runs/` 均不会提交到版本控制。OpenRouter 密钥目前未配置；拿到实验室密钥后按 [启动说明](docs/SETUP.md) 本地填写即可切换 `--planner openrouter`，无需改动验收器。
+
+独立规划服务已接入真实搜索闭环；[性能开发协议](docs/PLANNER_PERFORMANCE_PROTOCOL_2026-09-30.md) 固定两负载、1.5B / 3B / 三随机种子 / 固定规则共 12 项新 baseline 与独立 final。99 项测试通过，受控测试的增益不是实测结果。

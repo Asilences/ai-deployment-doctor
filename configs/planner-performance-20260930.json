@@ -1,0 +1,18 @@
+{
+  "protocol": "development-independent-planner-performance-v1",
+  "tasks": {
+    "serial": "configs/pilot-serial-windows-1.5b.json",
+    "prefill": "configs/pilot-prefill-windows-1.5b.json"
+  },
+  "planner_profiles": {
+    "local-1.5b": "configs/planner-local-1.5b.json",
+    "local-3b": "configs/planner-local-3b.json"
+  },
+  "representation": "original",
+  "history_mode": "full",
+  "iterations": 2,
+  "random_seeds": [100, 101, 102],
+  "order_seed": 20260930,
+  "minimum_search_start_seconds": 360,
+  "note": "12 fresh searches/finals; two proposal slots per method ceiling, fixed preset uses one; no old scores as controls."
+}

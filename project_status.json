@@ -33,7 +33,7 @@
   },
   "final_score_command_verified": true,
   "planner_v2_duplicate_execution_prevented": true,
-  "unit_tests_passed": 91,
+  "unit_tests_passed": 99,
   "proposal_replay": {
     "status": "completed",
     "protocol": "development-same-state-replay-v1",
@@ -242,5 +242,33 @@
     "exploratory_3b_action_inconsistent_proposals": 8,
     "planner_superiority_established": false,
     "next_step": "Freeze evidence-referenced output and authoritative controller action deltas before new performance searches"
+  },
+  "independent_planner_performance": {
+    "status": "implemented_not_yet_executed",
+    "protocol": "development-independent-planner-performance-v1",
+    "protocol_file": "docs/PLANNER_PERFORMANCE_PROTOCOL_2026-09-30.md",
+    "tasks": [
+      "serial",
+      "prefill"
+    ],
+    "methods": [
+      "local-1.5b",
+      "local-3b",
+      "random",
+      "fixed"
+    ],
+    "random_seeds": [
+      100,
+      101,
+      102
+    ],
+    "planned_jobs": 12,
+    "candidate_execution_ceiling": 22,
+    "llm_call_ceiling": 16,
+    "target_and_planner_gpu_serialization_tested": true,
+    "fresh_baseline_and_final_required": true,
+    "verifier_unchanged": true,
+    "new_controller_in_state_identity": true,
+    "superiority_established": false
   }
 }
