@@ -1,0 +1,29 @@
+{
+  "protocol": "development-same-state-replay-v1",
+  "order_seed": 20260930,
+  "max_seconds": 900,
+  "snapshots": [
+    {
+      "label": "serial_before_first_proposal_empty_history",
+      "run_directory": "runs/v3_1-smoke-20260930-034701-9b3d2a/serial-search",
+      "trial_number": 1
+    },
+    {
+      "label": "prefill_before_first_proposal_empty_history",
+      "run_directory": "runs/context-pilot-20260930-074637-e61387/J00-search",
+      "trial_number": 1
+    },
+    {
+      "label": "prefill_after_rejected_C02",
+      "run_directory": "runs/context-pilot-20260930-074637-e61387/J00-search",
+      "trial_number": 2
+    },
+    {
+      "label": "prefill_after_rejected_C01_originally_hidden_history",
+      "run_directory": "runs/context-pilot-20260930-074637-e61387/J01-search",
+      "trial_number": 2
+    }
+  ],
+  "missing_state_categories": ["after_an_accepted_candidate_before_a_later_proposal"],
+  "note": "Four development decision states, not four independent environments; 16 slots and 32 generation calls maximum. No post-decision candidate or final data as input."
+}

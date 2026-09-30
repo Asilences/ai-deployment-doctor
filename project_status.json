@@ -16,7 +16,21 @@
   "environment_pilot": {"tasks": 2, "methods": ["local", "random", "fixed"], "fresh_final_scores_completed": 6, "agent_superiority_established": false},
   "final_score_command_verified": true,
   "planner_v2_duplicate_execution_prevented": true,
-  "unit_tests_passed": 57,
+  "unit_tests_passed": 73,
+  "proposal_replay": {
+    "status": "implemented_not_executed",
+    "protocol": "development-same-state-replay-v1",
+    "protocol_file": "docs/REPLAY_PROTOCOL_2026-09-30.md",
+    "selection_file": "configs/replay-selection-20260930.json",
+    "snapshots": 4,
+    "proposal_slot_ceiling": 16,
+    "llm_call_ceiling": 32,
+    "future_information_exclusion_tested": true,
+    "historical_payload_hashes_verified": true,
+    "target_performance_experiments": 0,
+    "same_state_effect_established": false,
+    "performance_gain_established": false
+  },
   "latest_development_date": "2026-09-30",
   "planner_v3": {
     "implementation_commit": "5997744181e61ff338a96bca2e86f005d18934e9",
