@@ -26,6 +26,12 @@ def tracked_call(planner, send, request_metadata=None):
         response = send()
         row['usage'] = clean_usage(response)
         row['transport_status'] = 'received'
+        try:
+            reason = response['choices'][0].get('finish_reason')
+        except (KeyError, IndexError, TypeError, AttributeError):
+            reason = None
+        row['finish_reason'] = reason if reason in ('stop', 'length', 'tool_calls', 'content_filter', None) else 'other'
+        row['generation_limit_reached'] = (reason == 'length') if reason is not None else None
         if planner.kind == 'local':
             # Local generation only; remote bodies/headers/credentials are never retained.
             try:

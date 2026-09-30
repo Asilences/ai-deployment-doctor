@@ -158,3 +158,37 @@ class CandidateIdTests(unittest.TestCase):
             self.assertEqual(calls, [])
             self.assertEqual(result['stop_reason'], 'time_budget_reached')
             self.assertEqual(result['status'], 'completed')
+
+    def test_v31_bounds_both_fields_in_schema_and_parser(self):
+        p, calls = self.planner([self.reply()], version='v3.1')
+        result = p.propose(self.state, [])
+        self.assertEqual(result['candidate_id'], 'C11')
+        schema = calls[0]['response_format']['json_schema']['schema']
+        for key in ('hypothesis', 'expected_effect'):
+            self.assertEqual(schema['properties'][key]['maxLength'], 96)
+            self.assertEqual(schema['properties'][key]['minLength'], 1)
+        self.assertEqual(calls[0]['max_tokens'], 300)
+        self.assertEqual(calls[0]['seed'], 42)
+
+    def test_v31_rejects_overlong_fields_without_truncating(self):
+        for key in ('hypothesis', 'expected_effect'):
+            with self.subTest(key=key):
+                response = self.reply()
+                content = json.loads(response['choices'][0]['message']['content'])
+                content[key] = 'x' * 97
+                response['choices'][0]['message']['content'] = json.dumps(content)
+                p, calls = self.planner([response, response], version='v3.1')
+                with self.assertRaises(ValueError):
+                    p.propose(self.state, [])
+                self.assertEqual(len(calls), 2)
+                self.assertIn('x' * 97, p.last_trace[0]['response_content'])
+
+    def test_v3_schema_remains_unbounded_and_finish_reason_is_recorded(self):
+        response = self.reply()
+        response['choices'][0]['finish_reason'] = 'length'
+        p, calls = self.planner([response])
+        p.propose(self.state, [])
+        schema = calls[0]['response_format']['json_schema']['schema']
+        self.assertNotIn('maxLength', schema['properties']['hypothesis'])
+        self.assertEqual(p.last_trace[0]['finish_reason'], 'length')
+        self.assertTrue(p.last_trace[0]['generation_limit_reached'])

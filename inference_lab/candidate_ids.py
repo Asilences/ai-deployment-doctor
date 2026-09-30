@@ -25,7 +25,7 @@ def available_candidates(settings, state, history):
     return [row for row in candidate_catalog(settings) if row['config'] not in visited]
 
 
-def parse_id(response, catalogue, available):
+def parse_id(response, catalogue, available, max_text_length=4000):
     try:
         text = response['choices'][0]['message']['content'].strip()
         if text.startswith('```') and text.endswith('```'):
@@ -33,7 +33,7 @@ def parse_id(response, catalogue, available):
         result = json.loads(text)
         if not isinstance(result, dict) or set(result) != {'candidate_id', 'hypothesis', 'expected_effect'}:
             raise ValueError()
-        if any(not isinstance(result[k], str) or not 0 < len(result[k]) <= 4000
+        if any(not isinstance(result[k], str) or not 0 < len(result[k]) <= max_text_length
                for k in ('hypothesis', 'expected_effect')):
             raise ValueError()
         index = {row['candidate_id']: row['config'] for row in catalogue}
@@ -47,6 +47,8 @@ def parse_id(response, catalogue, available):
 
 
 def choose_by_id(planner, state, history):
+    bounded = planner.version == 'v3.1'
+    max_text_length = 96 if bounded else 4000
     available = available_candidates(planner.s, state, history)
     planner.last_available = available
     if not available:
@@ -71,6 +73,9 @@ def choose_by_id(planner, state, history):
         'candidate_id': {'type': 'string', 'enum': [r['candidate_id'] for r in available]},
         'hypothesis': {'type': 'string'}, 'expected_effect': {'type': 'string'}},
         'required': ['candidate_id', 'hypothesis', 'expected_effect'], 'additionalProperties': False}
+    if bounded:
+        for key in ('hypothesis', 'expected_effect'):
+            schema['properties'][key].update(minLength=1, maxLength=max_text_length)
     payload = {'model': str((planner.root / planner.s['model_path']).resolve()),
                'temperature': 0, 'seed': 42, 'max_tokens': 300,
                'messages': [{'role': 'system', 'content':
@@ -80,6 +85,11 @@ def choose_by_id(planner, state, history):
                             {'role': 'user', 'content': json.dumps(brief)}],
                'response_format': {'type': 'json_schema', 'json_schema': {
                    'name': 'candidate_id_proposal', 'schema': schema}}}
+    if bounded:
+        payload['messages'][0]['content'] += (
+            ' hypothesis and expected_effect must each be one short sentence of at most 96 characters. '
+            'Only current_metrics and prior_trials contain measured results; all available candidates '
+            'are unmeasured unless prior evidence explicitly says otherwise.')
     for attempt in range(2):
         request = urllib.request.Request('http://127.0.0.1:' + str(planner.s['port']) + '/v1/chat/completions',
                                          data=json.dumps(payload).encode(),
@@ -93,7 +103,7 @@ def choose_by_id(planner, state, history):
                                                 'available_candidates': available})
         trace = planner.last_trace[-1]
         try:
-            proposal = parse_id(response, catalogue, available)
+            proposal = parse_id(response, catalogue, available, max_text_length)
             validate_candidate(proposal['config'], planner.s)
             trace['parse_result'] = 'valid'
             trace['candidate_id'] = proposal['candidate_id']

@@ -86,7 +86,7 @@ def execute(s, backend, planner, directory, iterations, initial=None, max_second
                                                   'hardware': run['hardware'], 'backend': backend.name})
     planner.environment = run['hardware']
     run['planner_service_config'] = (validate_candidate({'parallel': 1, 'ubatch_size': 128}, s)
-                                     if getattr(planner, 'version', None) == 'v3' else None)
+                                     if getattr(planner, 'version', None) in ('v3', 'v3.1') else None)
 
     def save():
         calls = [c for trial in run['trials'] for c in trial.get('proposal_calls', [])]

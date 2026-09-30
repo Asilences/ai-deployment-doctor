@@ -65,7 +65,7 @@ def main():
     parser.add_argument('command', choices=['doctor', 'demo', 'baseline', 'run', 'audit', 'final', 'summary'])
     parser.add_argument('--config', type=Path, default=None)
     parser.add_argument('--planner', choices=['random', 'local', 'openrouter', 'fixed'], default=None)
-    parser.add_argument('--planner-version', choices=['v2', 'v3'], default='v2')
+    parser.add_argument('--planner-version', choices=['v2', 'v3', 'v3.1'], default='v2')
     parser.add_argument('--max-seconds', type=float, default=None,
                         help='Stop starting new proposal slots after this elapsed time; finish recovery safely')
     parser.add_argument('--input', type=Path, nargs='+', help='Summary directories or run.json files')

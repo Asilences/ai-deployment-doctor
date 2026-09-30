@@ -39,8 +39,8 @@ def parse_proposal(response, settings):
 class Planner:
     def __init__(self, kind, s, root, seed=731, version='v2'):
         self.kind, self.s, self.root = kind, s, root
-        if version not in ('v2', 'v3') or (version == 'v3' and kind != 'local'):
-            raise ValueError('Planner v3 is supported only by the local planner')
+        if version not in ('v2', 'v3', 'v3.1') or (version in ('v3', 'v3.1') and kind != 'local'):
+            raise ValueError('Planner v3/v3.1 is supported only by the local planner')
         self.version = version if kind in ('local', 'openrouter') else kind + '-v1'
         self.last_trace = []
         self.last_available = []
@@ -66,7 +66,7 @@ class Planner:
     def propose(self, state, history):
         self.last_trace = []
         self.last_available = []
-        if getattr(self, 'version', 'v2') == 'v3':
+        if getattr(self, 'version', 'v2') in ('v3', 'v3.1'):
             proposal = choose_by_id(self, state, history)
         else:
             proposal = self._propose(state, history)
