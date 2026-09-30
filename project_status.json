@@ -197,7 +197,7 @@
   "environment_pilot_result_file": "docs/PILOT_RESULTS_2026-09-24.md",
   "planner_v2_diagnostic_file": "docs/PLANNER_V2_2026-09-24.md",
   "planner_capacity": {
-    "status": "implemented_not_yet_executed",
+    "status": "completed",
     "protocol": "development-planner-capacity-v1",
     "protocol_file": "docs/CAPACITY_PROTOCOL_2026-09-30.md",
     "target_model_unchanged": true,
@@ -209,6 +209,38 @@
     "proposal_slot_ceiling": 32,
     "llm_call_ceiling": 64,
     "model_asset_verified": true,
-    "performance_gain_established": false
+    "performance_gain_established": false,
+    "implementation_commit": "58f67fc60830c68562dd89cc4f79e88e4509c1ec",
+    "batch": "runs/capacity-replay-20260930-182602-16a762",
+    "result_file": "docs/CAPACITY_RESULTS_2026-09-30.md",
+    "valid_proposals": 32,
+    "llm_calls": 32,
+    "total_tokens": 33071,
+    "retry_calls": 0,
+    "usage_missing_calls": 0,
+    "integrity_verified_jobs": 32,
+    "original_files_unchanged": true,
+    "execution_seconds": 32.203,
+    "target_performance_experiments": 0,
+    "final_scores_generated": 0,
+    "history_id_change_observed": false,
+    "model_id_changed_pairs": 16,
+    "field_review_by_model": {
+      "qwen25-15b": {
+        "unsupported_fact": 17,
+        "prediction": 9,
+        "unclear": 6,
+        "grounded": 0
+      },
+      "qwen25-3b": {
+        "unsupported_fact": 0,
+        "prediction": 29,
+        "unclear": 3,
+        "grounded": 0
+      }
+    },
+    "exploratory_3b_action_inconsistent_proposals": 8,
+    "planner_superiority_established": false,
+    "next_step": "Freeze evidence-referenced output and authoritative controller action deltas before new performance searches"
   }
 }
