@@ -56,6 +56,47 @@ class ContextAblationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Planner('random', s, ROOT, context_mode='no_feedback')
 
+    def test_no_history_first_slot_matches_full_and_later_hides_only_semantic_history(self):
+        empty = {'prior_trials': [], 'current_metrics': {'rate': 123},
+                 'current_config': {'parallel': 2}, 'available_candidates': ['C00', 'C11'],
+                 'workload': {'concurrency': 8}, 'hardware': {'gpu': 'test'},
+                 'environment': {'model': 'test'}, 'latency_limits_ms': [1, 2]}
+        self.assertEqual(filter_context(empty, 'full'), filter_context(empty, 'no_history'))
+        observed = {**empty, 'prior_trials': [{'config': {'parallel': 1}, 'gain': -.1,
+                                              'reason': 'HISTORY_MARKER'}]}
+        hidden = filter_context(observed, 'no_history')
+        self.assertEqual(hidden, empty)
+        self.assertEqual(len(observed['prior_trials']), 1)
+
+    def test_no_history_request_preserves_metrics_and_excludes_executed_candidate(self):
+        s = json.loads((ROOT / 'configs/windows-1.5b.json').read_text())
+        state = {'config': s['baseline'], 'metrics': {'rate': 'METRIC_MARKER'}}
+        history = [{'candidate_executed': True, 'proposal': {
+            'candidate_id': 'C02', 'config': {'parallel': 1, 'ubatch_size': 256}},
+            'verdict': {'accepted': False, 'gain': -.1, 'reason': 'HISTORY_MARKER'}}]
+        response = {'choices': [{'message': {'content': json.dumps({
+            'candidate_id': 'C11', 'hypothesis': 'Try batching', 'expected_effect': 'Unknown'})}}]}
+        payloads = []
+        for mode in ('full', 'no_history'):
+            planner = Planner('local', s, ROOT, version='v3.1', context_mode=mode)
+            def fake(request, timeout):
+                payloads.append(json.loads(request.data))
+                return io.BytesIO(json.dumps(response).encode())
+            planner.local_http = type('Client', (), {'open': staticmethod(fake)})()
+            planner.propose(state, history)
+            evidence = planner.last_trace[0]['request']['evidence']
+            self.assertEqual(len(evidence['available_candidates']), 14)
+            self.assertNotIn('C02', [c['candidate_id'] for c in evidence['available_candidates']])
+            self.assertEqual(evidence['current_metrics'], state['metrics'])
+        full, hidden = [json.loads(p['messages'][1]['content']) for p in payloads]
+        self.assertEqual(hidden['prior_trials'], [])
+        self.assertEqual({k: v for k, v in full.items() if k != 'prior_trials'},
+                         {k: v for k, v in hidden.items() if k != 'prior_trials'})
+        self.assertNotIn('HISTORY_MARKER', json.dumps(payloads[1]))
+        self.assertIn('METRIC_MARKER', json.dumps(payloads[1]))
+        self.assertEqual(payloads[0]['response_format'], payloads[1]['response_format'])
+        self.assertEqual(payloads[0]['messages'][0], payloads[1]['messages'][0])
+
     def test_schedule_seed_reproducibility_unique_jobs_and_no_free_fixed_slots(self):
         first = pilot.build_schedule(['serial', 'prefill'], ['full', 'random', 'fixed'], [100, 101, 102], 17, 2)
         second = pilot.build_schedule(['serial', 'prefill'], ['full', 'random', 'fixed'], [100, 101, 102], 17, 2)

@@ -1,5 +1,5 @@
 """Remove explicit evidence, not the controller's common feasibility constraints."""
-MODES = ('full', 'no_environment', 'no_workload', 'no_context', 'no_feedback')
+MODES = ('full', 'no_environment', 'no_workload', 'no_context', 'no_feedback', 'no_history')
 
 
 def filter_context(brief, mode):
@@ -14,4 +14,7 @@ def filter_context(brief, mode):
     if mode == 'no_feedback':
         result.pop('current_metrics', None)
         result.pop('prior_trials', None)
+    if mode == 'no_history':
+        # Match the empty-history first-slot interface; keep live incumbent metrics.
+        result['prior_trials'] = []
     return result
